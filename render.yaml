@@ -1,0 +1,1 @@
+services:\n  - type: web\n    name: sitelens-seo-api\n    runtime: docker\n    dockerfilePath: ./backend/Dockerfile\n    healthCheckPath: /health\n    plan: free\n
