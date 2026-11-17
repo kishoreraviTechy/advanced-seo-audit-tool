@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl, Field
+from database import Base, SessionLocal, engine, AuditRecord
 
 app = FastAPI(title="SiteLens SEO Audit API", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -40,9 +41,22 @@ def page_score(p):
     issues = [message for passed, message in checks if not passed]
     return round(100 * (len(checks)-len(issues))/len(checks)), issues
 
+@app.on_event("startup")
+def initialize_database():
+    if engine:
+        Base.metadata.create_all(bind=engine)
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "sitelens-seo-audit"}
+
+@app.get("/api/audits")
+def audit_history():
+    if not SessionLocal:
+        return {"items": [], "storage": "DATABASE_URL is not configured"}
+    with SessionLocal() as db:
+        items = db.query(AuditRecord).order_by(AuditRecord.created_at.desc()).limit(50).all()
+        return {"items": [{"id":x.id,"url":x.url,"pages_crawled":x.pages_crawled,"average_score":x.average_score,"created_at":x.created_at.isoformat()} for x in items]}
 
 @app.post("/api/audit")
 def audit(req: AuditRequest):
@@ -107,8 +121,14 @@ def audit(req: AuditRequest):
     counts = {}
     for p in pages:
         for issue in p["issues"]: counts[issue] = counts.get(issue,0)+1
-    return {"url":root,"pages_crawled":len(pages),"average_score":round(sum(p["score"] for p in pages)/len(pages)) if pages else 0,
+    result = {"url":root,"pages_crawled":len(pages),"average_score":round(sum(p["score"] for p in pages)/len(pages)) if pages else 0,
             "pages":pages,"broken_links":broken,"errors":errors,
             "issue_summary":[{"issue":k,"count":v} for k,v in sorted(counts.items(),key=lambda x:-x[1])],
             "robots_txt":robots,"sitemap":sitemap,"duration_seconds":round(time.time()-started,2),
             "notice":"Rule-based audit guidance only; scores do not represent Google rankings."}
+    if SessionLocal:
+        with SessionLocal() as db:
+            record = AuditRecord(url=root, pages_crawled=result["pages_crawled"], average_score=result["average_score"], report=result)
+            db.add(record)
+            db.commit()
+    return result
