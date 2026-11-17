@@ -1,1 +1,18 @@
-services:\n  - type: web\n    name: sitelens-seo-api\n    runtime: docker\n    dockerfilePath: ./backend/Dockerfile\n    healthCheckPath: /health\n    plan: free\n
+databases:
+  - name: sitelens-postgres
+    databaseName: sitelens
+    user: sitelens
+    plan: free
+
+services:
+  - type: web
+    name: sitelens-seo-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sitelens-postgres
+          property: connectionString
