@@ -25,7 +25,7 @@ A full-stack portfolio application for crawling public websites, finding common 
 2. Create and activate a Python virtual environment.
 3. Install dependencies: pip install -r requirements.txt
 4. Start API: uvicorn main:app --reload --port 8000
-5. API docs: http://localhost:8000/docs
+5. Optional: set DATABASE_URL to a PostgreSQL connection string to enable persistent audit history.\n6. API docs: http://localhost:8000/docs
 
 ### Frontend
 1. Open another terminal in frontend.
@@ -44,14 +44,14 @@ Set VITE_API_URL to your deployed API URL when hosting the frontend. The default
 Hosting providers require your own account authorization. Deployment configuration is included, but this app has not yet been published to a hosting provider.
 
 ## API
-- GET /health — service health
+- GET /health — service health\n- GET /api/audits — latest 50 saved reports (requires DATABASE_URL)
 - POST /api/audit — JSON body: {"url":"https://example.com","max_pages":10}
 
 ## Responsible use and limitations
 - Portfolio-grade MVP; not a Google Search Console, Lighthouse or PageSpeed replacement.
 - Scores are rule-based indicators and do not represent Google rankings.
 - Crawler is limited to public HTTP(S), same-host pages, a maximum page count, timeouts and response-size limits. It does not execute JavaScript.
-- This version does not yet validate every external link, persist audit history, or integrate Google APIs.
+- This version does not yet validate every external link or integrate Google APIs.
 - Only audit websites you own or are authorized to test. Respect website terms and crawl load.
 
 ## Roadmap
